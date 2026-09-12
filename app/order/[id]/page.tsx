@@ -3,18 +3,18 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 
-export default function OrderTrackingPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+import { useParams } from "next/navigation";
+
+export default function OrderTrackingPage() {
+  const params = useParams();
+  
   const [order, setOrder] = useState<any>(null);
 
   const loadOrder = async () => {
     const { data } = await supabase
       .from("orders")
       .select("*")
-      .eq("id", params.id)
+      .eq("id", String(params.id))
       .single();
 
     if (data) {
