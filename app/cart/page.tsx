@@ -51,6 +51,7 @@ const tableToken =
 const placeOrder = async () => {
 console.log("TABLE NUMBER:", tableNumber);
 console.log("TABLE TOKEN:", tableToken);
+console.log("PLACE ORDER CLICKED");
   if (
     orderMode !== "dine_in" &&
     (!customerName.trim() || !phoneNumber.trim())
