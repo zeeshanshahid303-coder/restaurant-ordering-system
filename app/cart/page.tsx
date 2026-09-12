@@ -112,10 +112,13 @@ if (itemsError) {
   return;
 }
 
-      localStorage.removeItem("cart");
-      setCart({});
+localStorage.removeItem("cart");
+localStorage.removeItem("cartItems");
 
-      alert("Order placed successfully! 🎉");
+setCart({});
+localStorage.setItem("currentOrderId", order.id);
+
+window.location.href = `/order/${order.id}`;
     } catch (error) {
       console.error(error);
       alert("Something went wrong.");
