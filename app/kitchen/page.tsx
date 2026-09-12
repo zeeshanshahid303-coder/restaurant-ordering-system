@@ -9,6 +9,7 @@ const [soundEnabled, setSoundEnabled] = useState(false);
 const soundEnabledRef = useRef(false);
 
 const previousCountRef = useRef<number>(0);
+const notifiedOrdersRef = useRef(new Set<string>());
 const requestNotificationPermission = async () => {
   if ("Notification" in window) {
     await Notification.requestPermission();
@@ -53,14 +54,23 @@ const newCount = mergedOrders.filter(
 console.log("PREVIOUS:", previousCountRef.current);
 console.log("CURRENT:", newCount);
 
+const currentNewOrders = mergedOrders.filter(
+  (order) => order.status === "NEW"
+);
+
+const unseenOrders = currentNewOrders.filter(
+  (order) => !notifiedOrdersRef.current.has(order.id)
+);
+
 if (
   soundEnabledRef.current &&
-  previousCountRef.current > 0 &&
-  newCount > previousCountRef.current
+  unseenOrders.length > 0
 ) {
-  console.log("PLAYING SOUND");
-
   new Audio("/notification.mp3").play();
+
+  unseenOrders.forEach((order) =>
+    notifiedOrdersRef.current.add(order.id)
+  );
 
   if (Notification.permission === "granted") {
     new Notification("🍽 New Order Received!", {
@@ -68,7 +78,6 @@ if (
     });
   }
 }
-
 console.log("SOUND ENABLED:", soundEnabledRef.current);
 previousCountRef.current = newCount;
 
