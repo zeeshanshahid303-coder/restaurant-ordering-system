@@ -48,6 +48,8 @@ const tableToken =
   typeof window !== "undefined"
     ? localStorage.getItem("tableToken")
     : null;
+    console.log("TABLE NUMBER:", tableNumber);
+console.log("TABLE TOKEN:", tableToken);
 const placeOrder = async () => {
 console.log("TABLE NUMBER:", tableNumber);
 console.log("TABLE TOKEN:", tableToken);
@@ -78,7 +80,14 @@ if (tableNumber && tableToken) {
     .eq("table_number", tableNumber)
     .eq("qr_token", tableToken)
     .single();
-
+alert(
+  JSON.stringify({
+    tableNumber,
+    tableToken,
+    tableData,
+    tableError,
+  })
+);
   tableId = tableData?.id || null;
 
   console.log("TABLE NUMBER:", tableNumber);
@@ -147,7 +156,7 @@ localStorage.removeItem("cartItems");
 setCart({});
 localStorage.setItem("currentOrderId", order.id);
 
-window.location.href = `/order/${order.id}`;
+window.location.href = `/order/${order.i}`;
     } catch (error) {
       console.error(error);
       alert("Something went wrong.");
