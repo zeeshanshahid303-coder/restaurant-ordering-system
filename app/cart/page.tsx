@@ -39,7 +39,15 @@ const orderMode =
   typeof window !== "undefined"
     ? localStorage.getItem("orderMode") || "dine_in"
     : "dine_in";
+const tableNumber =
+  typeof window !== "undefined"
+    ? localStorage.getItem("tableNumber")
+    : null;
 
+const tableToken =
+  typeof window !== "undefined"
+    ? localStorage.getItem("tableToken")
+    : null;
 const placeOrder = async () => {
 
   if (
@@ -59,6 +67,18 @@ const placeOrder = async () => {
   }
 
   try {
+    let tableId = null;
+
+if (tableNumber && tableToken) {
+  const { data: tableData } = await supabase
+    .from("tables")
+    .select("id")
+    .eq("table_number", tableNumber)
+    .eq("qr_token", tableToken)
+    .single();
+
+  tableId = tableData?.id || null;
+}
       setLoading(true);
 
       const { data: order, error: orderError } = await supabase
@@ -83,6 +103,7 @@ const placeOrder = async () => {
       : null,
 
   subtotal: subtotal,
+  table_id: tableId,
   total: subtotal,
 })
         .select()

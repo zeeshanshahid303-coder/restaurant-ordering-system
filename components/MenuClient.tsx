@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
+import { supabase } from "../lib/supabase";
 export default function MenuClient({
   items,
   categories,
@@ -10,7 +10,7 @@ export default function MenuClient({
   categories: any[];
 }) {
   const [cart, setCart] = useState<Record<string, number>>({});
-
+const [activeOrder, setActiveOrder] = useState<any>(null);
   useEffect(() => {
     const savedCart = localStorage.getItem("cart");
 
@@ -25,11 +25,46 @@ export default function MenuClient({
   }, [items]);
 useEffect(() => {
   const params = new URLSearchParams(window.location.search);
+
   const mode = params.get("mode");
+  const table = params.get("table");
+  const token = params.get("token");
 
   if (mode) {
     localStorage.setItem("orderMode", mode);
   }
+
+  if (table) {
+    localStorage.setItem("tableNumber", table);
+  }
+
+  if (token) {
+    localStorage.setItem("tableToken", token);
+  }
+}, []);
+useEffect(() => {
+  const loadActiveOrder = async () => {
+    const orderId = localStorage.getItem("currentOrderId");
+
+    if (!orderId) return;
+
+    const { data } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("id", orderId)
+      .single();
+
+    if (
+      data &&
+      ["NEW", "PREPARING", "READY"].includes(data.status)
+    ) {
+      setActiveOrder(data);
+    } else {
+      localStorage.removeItem("currentOrderId");
+    }
+  };
+
+  loadActiveOrder();
 }, []);
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cart));
@@ -66,6 +101,24 @@ useEffect(() => {
 
   return (
     <>
+    {activeOrder && (
+  <div className="bg-yellow-100 border border-yellow-400 rounded-lg p-4 mb-4">
+    <div className="font-bold text-lg">
+      👨‍🍳 Your Order is {activeOrder.status}
+    </div>
+
+    <div className="text-sm mt-1">
+      Order #{String(activeOrder.id).slice(0, 8)}
+    </div>
+
+    <a
+      href={`/order/${activeOrder.id}`}
+      className="inline-block mt-3 bg-black text-white px-4 py-2 rounded"
+    >
+      Track Order
+    </a>
+  </div>
+)}
       {cartCount > 0 && (
         <a
           href="/cart"

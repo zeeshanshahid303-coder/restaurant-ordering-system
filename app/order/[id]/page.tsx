@@ -24,6 +24,9 @@ export default function OrderTrackingPage() {
 
   useEffect(() => {
     loadOrder();
+    const interval = setInterval(() => {
+  loadOrder();
+}, 3000);
 
     const channel = supabase
       .channel("order-tracking")
@@ -34,13 +37,17 @@ export default function OrderTrackingPage() {
           schema: "public",
           table: "orders",
         },
-        () => {
-          loadOrder();
-        }
+      (payload) => {
+  console.log("Realtime update:", payload);
+  loadOrder();
+}
       )
-      .subscribe();
+      .subscribe((status) => {
+  console.log("SUB STATUS:", status);
+});
 
     return () => {
+        clearInterval(interval);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -80,6 +87,30 @@ export default function OrderTrackingPage() {
         <p className="text-2xl font-bold">
           {getStatusText()}
         </p>
+      <a
+  href="/menu"
+  className="inline-block mt-4 bg-black text-white px-4 py-2 rounded"
+>
+  🍽 Back to Menu
+</a>
+
+{order.status === "COMPLETED" && (
+  <div className="mt-4">
+    <div className="text-green-600 font-bold mb-3">
+      ✅ Order Served Successfully
+    </div>
+
+    <a
+      href="/menu"
+      className="inline-block bg-green-600 text-white px-4 py-2 rounded"
+      onClick={() =>
+        localStorage.removeItem("currentOrderId")
+      }
+    >
+      🍽 Place New Order
+    </a>
+  </div>
+)}  
       </div>
     </main>
   );
