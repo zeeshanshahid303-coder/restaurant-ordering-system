@@ -48,12 +48,9 @@ const tableToken =
   typeof window !== "undefined"
     ? localStorage.getItem("tableToken")
     : null;
-    console.log("TABLE NUMBER:", tableNumber);
-console.log("TABLE TOKEN:", tableToken);
+    
 const placeOrder = async () => {
-console.log("TABLE NUMBER:", tableNumber);
-console.log("TABLE TOKEN:", tableToken);
-console.log("PLACE ORDER CLICKED");
+
   if (
     orderMode !== "dine_in" &&
     (!customerName.trim() || !phoneNumber.trim())
@@ -82,18 +79,11 @@ if (tableNumber && tableToken) {
     .single();
 
   tableId = tableData?.id || null;
-  console.log("TABLE ID AFTER LOOKUP:", tableId);
-console.log("TABLE ID AFTER LOOKUP:", tableId);
-  console.log("TABLE NUMBER:", tableNumber);
-  console.log("TABLE TOKEN:", tableToken);
-  console.log("TABLE ERROR:", tableError);
-  console.log("TABLE DATA:", tableData);
-  console.log("TABLE ID:", tableId);
+  
+
 }
       setLoading(true);
-console.log("FINAL TABLE ID:", tableId);
-console.log("TABLE ID BEFORE ORDER INSERT:", tableId);
-console.log("TABLE ID BEFORE ORDER INSERT:", tableId);
+
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -137,10 +127,7 @@ const orderItems =
 const { error: itemsError } = await supabase
   .from("order_items")
   .insert(orderItems);
-  console.log("ORDER ID:", order.id);
-console.log("ORDER ITEMS TO INSERT:", orderItems);
-console.log("ITEMS ERROR:", itemsError);
-console.log("ORDER ITEMS SENT:", orderItems);
+
 if (itemsError) {
   alert(itemsError.message);
   return;
@@ -152,7 +139,7 @@ localStorage.removeItem("cartItems");
 setCart({});
 localStorage.setItem("currentOrderId", order.id);
 
-window.location.href = `/order/${order.i}`;
+window.location.href = `/order/${order.id}`;
     } catch (error) {
       console.error(error);
       alert("Something went wrong.");
