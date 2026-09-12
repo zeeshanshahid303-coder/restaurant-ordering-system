@@ -89,7 +89,7 @@ alert(
   })
 );
   tableId = tableData?.id || null;
-
+console.log("TABLE ID AFTER LOOKUP:", tableId);
   console.log("TABLE NUMBER:", tableNumber);
   console.log("TABLE TOKEN:", tableToken);
   console.log("TABLE ERROR:", tableError);
@@ -97,7 +97,8 @@ alert(
   console.log("TABLE ID:", tableId);
 }
       setLoading(true);
-
+console.log("FINAL TABLE ID:", tableId);
+console.log("TABLE ID BEFORE ORDER INSERT:", tableId);
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
