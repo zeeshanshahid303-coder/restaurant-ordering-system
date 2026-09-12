@@ -49,7 +49,8 @@ const tableToken =
     ? localStorage.getItem("tableToken")
     : null;
 const placeOrder = async () => {
-
+console.log("TABLE NUMBER:", tableNumber);
+console.log("TABLE TOKEN:", tableToken);
   if (
     orderMode !== "dine_in" &&
     (!customerName.trim() || !phoneNumber.trim())
