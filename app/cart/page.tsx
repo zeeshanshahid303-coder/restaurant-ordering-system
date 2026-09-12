@@ -70,6 +70,7 @@ console.log("PLACE ORDER CLICKED");
 
   try {
     let tableId = null;
+    
 
 if (tableNumber && tableToken) {
   const { data: tableData } = await supabase
@@ -80,6 +81,8 @@ if (tableNumber && tableToken) {
     .single();
 
   tableId = tableData?.id || null;
+  console.log("TABLE DATA:", tableData);
+console.log("TABLE ID:", tableId);
 }
       setLoading(true);
 
