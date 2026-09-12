@@ -3,6 +3,27 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../../lib/supabase";
 
+// Formats a raw table_number value ("1", 1, or already "T01") into "T01" style.
+function formatTableNumber(tableNumber: string | number | null | undefined): string {
+  if (tableNumber === null || tableNumber === undefined || tableNumber === "") {
+    return "—";
+  }
+
+  const str = String(tableNumber).trim();
+
+  if (/^T\d+$/i.test(str)) {
+    return str.toUpperCase();
+  }
+
+  const num = parseInt(str, 10);
+
+  if (Number.isNaN(num)) {
+    return str;
+  }
+
+  return `T${String(num).padStart(2, "0")}`;
+}
+
 export default function KitchenPage() {
   const [orders, setOrders] = useState<any[]>([]);
 const [soundEnabled, setSoundEnabled] = useState(false);
@@ -40,11 +61,30 @@ const loadOrders = async () => {
     return;
   }
 
+  const { data: tablesData, error: tablesError } = await supabase
+    .from("tables")
+    .select("id, table_number");
+
+  if (tablesError) {
+    console.error(tablesError);
+    return;
+  }
+
+const tableNumberById = new Map(
+  (tablesData || []).map((table) => [
+    table.id,
+    table.table_number,
+  ])
+);
+
   const mergedOrders = ordersData.map((order) => ({
     ...order,
     order_items: orderItemsData.filter(
       (item) => item.order_id === order.id
     ),
+    table_display: order.table_id
+      ? formatTableNumber(tableNumberById.get(order.table_id))
+      : "—",
   }));
 
 const newCount = mergedOrders.filter(
@@ -208,6 +248,7 @@ if (newValue) {
       {newOrders.map((order) => (
         <div key={order.id} className="border rounded-xl p-4">
           <p><strong>Order ID:</strong> {order.id}</p>
+          <p><strong>Table:</strong> {order.table_display}</p>
           <p><strong>Mode:</strong> {order.order_mode}</p>
 
           {order.customer_name && (
@@ -267,6 +308,7 @@ if (newValue) {
       {preparingOrders.map((order) => (
         <div key={order.id} className="border rounded-xl p-4">
           <p><strong>Order ID:</strong> {order.id}</p>
+          <p><strong>Table:</strong> {order.table_display}</p>
           <p><strong>Total:</strong> ₹{order.total}</p>
 {order.order_items?.length > 0 && (
   <div className="mt-3">
@@ -301,6 +343,7 @@ if (newValue) {
   {readyOrders.map((order) => (
     <div key={order.id} className="border rounded-xl p-4">
       <p><strong>Order ID:</strong> {order.id}</p>
+      <p><strong>Table:</strong> {order.table_display}</p>
       <p><strong>Total:</strong> ₹{order.total}</p>
 
       {order.order_items?.length > 0 && (
@@ -336,6 +379,7 @@ if (newValue) {
       {completedOrders.map((order) => (
         <div key={order.id} className="border rounded-xl p-4">
           <p><strong>Order ID:</strong> {order.id}</p>
+          <p><strong>Table:</strong> {order.table_display}</p>
           <p><strong>Total:</strong> ₹{order.total}</p>
 {order.order_items?.length > 0 && (
   <div className="mt-3">
