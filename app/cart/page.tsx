@@ -80,15 +80,9 @@ if (tableNumber && tableToken) {
     .eq("table_number", tableNumber)
     .eq("qr_token", tableToken)
     .single();
-alert(
-  JSON.stringify({
-    tableNumber,
-    tableToken,
-    tableData,
-    tableError,
-  })
-);
+
   tableId = tableData?.id || null;
+  console.log("TABLE ID AFTER LOOKUP:", tableId);
 console.log("TABLE ID AFTER LOOKUP:", tableId);
   console.log("TABLE NUMBER:", tableNumber);
   console.log("TABLE TOKEN:", tableToken);
@@ -98,6 +92,7 @@ console.log("TABLE ID AFTER LOOKUP:", tableId);
 }
       setLoading(true);
 console.log("FINAL TABLE ID:", tableId);
+console.log("TABLE ID BEFORE ORDER INSERT:", tableId);
 console.log("TABLE ID BEFORE ORDER INSERT:", tableId);
       const { data: order, error: orderError } = await supabase
         .from("orders")
