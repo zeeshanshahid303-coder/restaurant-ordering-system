@@ -69,20 +69,23 @@ console.log("PLACE ORDER CLICKED");
   }
 
   try {
-    let tableId = null;
-    
+let tableId = null;
 
 if (tableNumber && tableToken) {
-  const { data: tableData } = await supabase
+  const { data: tableData, error: tableError } = await supabase
     .from("tables")
-    .select("id")
+    .select("*")
     .eq("table_number", tableNumber)
     .eq("qr_token", tableToken)
     .single();
 
   tableId = tableData?.id || null;
+
+  console.log("TABLE NUMBER:", tableNumber);
+  console.log("TABLE TOKEN:", tableToken);
+  console.log("TABLE ERROR:", tableError);
   console.log("TABLE DATA:", tableData);
-console.log("TABLE ID:", tableId);
+  console.log("TABLE ID:", tableId);
 }
       setLoading(true);
 
