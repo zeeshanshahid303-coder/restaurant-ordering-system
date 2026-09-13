@@ -11,6 +11,18 @@ export default function MenuClient({
 }) {
   const [cart, setCart] = useState<Record<string, number>>({});
 const [activeOrder, setActiveOrder] = useState<any>(null);
+const [dineInSession, setDineInSession] = useState<{
+  tableNumber: string;
+  tableToken: string;
+} | null>(null);
+
+const [waiterCallStatus, setWaiterCallStatus] = useState<
+  "idle" | "loading" | "sent" | "error"
+>("idle");
+
+const [billRequestStatus, setBillRequestStatus] = useState<
+  "idle" | "loading" | "sent" | "error"
+>("idle");
   useEffect(() => {
     const savedCart = localStorage.getItem("cart");
 
@@ -41,6 +53,18 @@ useEffect(() => {
   if (token) {
     localStorage.setItem("tableToken", token);
   }
+  const resolvedTable =
+  table || localStorage.getItem("tableNumber");
+
+const resolvedToken =
+  token || localStorage.getItem("tableToken");
+
+if (resolvedTable && resolvedToken) {
+  setDineInSession({
+    tableNumber: resolvedTable,
+    tableToken: resolvedToken,
+  });
+}
 }, []);
 useEffect(() => {
   const loadActiveOrder = async () => {
@@ -93,7 +117,67 @@ useEffect(() => {
       };
     });
   };
+const callWaiter = async () => {
+  if (!dineInSession) return;
 
+  setWaiterCallStatus("loading");
+
+  const { data: tableData } = await supabase
+    .from("tables")
+    .select("*")
+    .eq("table_number", dineInSession.tableNumber)
+    .eq("qr_token", dineInSession.tableToken)
+    .single();
+
+  if (!tableData?.id) {
+    setWaiterCallStatus("error");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("table_requests")
+    .insert({
+      table_id: tableData.id,
+      type: "CALL_WAITER",
+    });
+
+  setWaiterCallStatus("sent");
+
+  setTimeout(() => {
+    setWaiterCallStatus("idle");
+  }, 60000);
+};
+
+const requestBill = async () => {
+  if (!dineInSession) return;
+
+  setBillRequestStatus("loading");
+
+  const { data: tableData } = await supabase
+    .from("tables")
+    .select("*")
+    .eq("table_number", dineInSession.tableNumber)
+    .eq("qr_token", dineInSession.tableToken)
+    .single();
+
+  if (!tableData?.id) {
+    setBillRequestStatus("error");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("table_requests")
+    .insert({
+      table_id: tableData.id,
+      type: "REQUEST_BILL",
+    });
+
+  setBillRequestStatus("sent");
+
+  setTimeout(() => {
+    setBillRequestStatus("idle");
+  }, 60000);
+};
   const cartCount = Object.values(cart).reduce(
     (sum, qty) => sum + qty,
     0
@@ -117,6 +201,35 @@ useEffect(() => {
     >
       Track Order
     </a>
+  </div>
+)}
+{dineInSession && (
+  <div className="flex gap-3 mb-6">
+    <button
+      onClick={callWaiter}
+      disabled={
+        waiterCallStatus === "loading" ||
+        waiterCallStatus === "sent"
+      }
+      className="bg-amber-600 text-white px-4 py-2 rounded"
+    >
+      {waiterCallStatus === "sent"
+        ? "🔔 Waiter Notified"
+        : "🔔 Call Waiter"}
+    </button>
+
+    <button
+      onClick={requestBill}
+      disabled={
+        billRequestStatus === "loading" ||
+        billRequestStatus === "sent"
+      }
+      className="bg-slate-700 text-white px-4 py-2 rounded"
+    >
+      {billRequestStatus === "sent"
+        ? "🧾 Bill Requested"
+        : "🧾 Request Bill"}
+    </button>
   </div>
 )}
       {cartCount > 0 && (

@@ -24,13 +24,22 @@ function formatTableNumber(tableNumber: string | number | null | undefined): str
   return `T${String(num).padStart(2, "0")}`;
 }
 
+function formatRequestType(type: string): string {
+  if (type === "CALL_WAITER") return "Call Waiter";
+  if (type === "REQUEST_BILL") return "Request Bill";
+  return type;
+}
+
 export default function KitchenPage() {
   const [orders, setOrders] = useState<any[]>([]);
+const [tableRequests, setTableRequests] = useState<any[]>([]);
 const [soundEnabled, setSoundEnabled] = useState(false);
 const soundEnabledRef = useRef(false);
 
 const previousCountRef = useRef<number>(0);
 const notifiedOrdersRef = useRef(new Set<string>());
+const notifiedRequestsRef = useRef(new Set<string>());
+const isFirstRequestLoadRef = useRef(true);
 const requestNotificationPermission = async () => {
   if ("Notification" in window) {
     await Notification.requestPermission();
@@ -70,12 +79,20 @@ const loadOrders = async () => {
     return;
   }
 
-const tableNumberById = new Map(
-  (tablesData || []).map((table) => [
-    table.id,
-    table.table_number,
-  ])
-);
+  const { data: requestsData, error: requestsError } = await supabase
+    .from("table_requests")
+    .select("*")
+    .eq("status", "PENDING")
+    .order("created_at", { ascending: true });
+
+  if (requestsError) {
+    console.error(requestsError);
+    return;
+  }
+
+  const tableNumberById = new Map(
+    tablesData.map((table) => [table.id, table.table_number])
+  );
 
   const mergedOrders = ordersData.map((order) => ({
     ...order,
@@ -85,6 +102,11 @@ const tableNumberById = new Map(
     table_display: order.table_id
       ? formatTableNumber(tableNumberById.get(order.table_id))
       : "—",
+  }));
+
+  const mergedRequests = requestsData.map((request) => ({
+    ...request,
+    table_display: formatTableNumber(tableNumberById.get(request.table_id)),
   }));
 
 const newCount = mergedOrders.filter(
@@ -121,8 +143,30 @@ if (
 console.log("SOUND ENABLED:", soundEnabledRef.current);
 previousCountRef.current = newCount;
 
+// Table requests (Waiter Calls + Bill Requests) sound —
+// plays once per newly-seen pending request, never on poll refreshes,
+// and never for requests that were already pending on first page load.
+if (isFirstRequestLoadRef.current) {
+  mergedRequests.forEach((request) =>
+    notifiedRequestsRef.current.add(request.id)
+  );
+  isFirstRequestLoadRef.current = false;
+} else {
+  const unseenRequests = mergedRequests.filter(
+    (request) => !notifiedRequestsRef.current.has(request.id)
+  );
+
+  if (soundEnabledRef.current && unseenRequests.length > 0) {
+    new Audio("/waiter-call.mp3").play();
+  }
+
+  unseenRequests.forEach((request) =>
+    notifiedRequestsRef.current.add(request.id)
+  );
+}
 
 setOrders(mergedOrders);
+setTableRequests(mergedRequests);
 };
 useEffect(() => {
   loadOrders();
@@ -147,9 +191,26 @@ useEffect(() => {
     )
     .subscribe();
 
+  const requestsChannel = supabase
+    .channel("kitchen-table-requests")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "table_requests",
+      },
+      () => {
+        console.log("Table request realtime triggered");
+        loadOrders();
+      }
+    )
+    .subscribe();
+
   return () => {
     clearInterval(interval);
     supabase.removeChannel(channel);
+    supabase.removeChannel(requestsChannel);
   };
 }, []);
 
@@ -197,6 +258,18 @@ const rejectOrder = async (id: string) => {
     loadOrders();
   };
 
+const resolveTableRequest = async (id: string) => {
+  await supabase
+    .from("table_requests")
+    .update({
+      status: "RESOLVED",
+      resolved_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  loadOrders();
+};
+
   const newOrders = orders.filter(
     (order) => order.status === "NEW"
   );
@@ -211,6 +284,15 @@ const readyOrders = orders.filter(
 const completedOrders = orders.filter(
   (order) => order.status === "COMPLETED"
 );
+
+const waiterCalls = tableRequests.filter(
+  (request) => request.type === "CALL_WAITER"
+);
+
+const billRequests = tableRequests.filter(
+  (request) => request.type === "REQUEST_BILL"
+);
+
 return (
   <main className="p-6">
     <h1 className="text-3xl font-bold mb-6">
@@ -239,6 +321,50 @@ if (newValue) {
       : "🔕 Notifications OFF"}
   </button>
 </div>
+
+    {/* WAITER CALLS */}
+    <h2 className="text-xl font-bold mb-4">
+      🔔 Waiter Calls ({waiterCalls.length})
+    </h2>
+
+    <div className="space-y-4 mb-8">
+      {waiterCalls.map((request) => (
+        <div key={request.id} className="border rounded-xl p-4 bg-amber-50">
+          <p><strong>Table:</strong> {request.table_display}</p>
+          <p><strong>Requested:</strong> {new Date(request.created_at).toLocaleTimeString()}</p>
+
+          <button
+            onClick={() => resolveTableRequest(request.id)}
+            className="bg-amber-600 text-white px-4 py-2 rounded mt-4"
+          >
+            ✅ Resolve
+          </button>
+        </div>
+      ))}
+    </div>
+
+    {/* BILL REQUESTS */}
+    <h2 className="text-xl font-bold mb-4">
+      🧾 Bill Requests ({billRequests.length})
+    </h2>
+
+    <div className="space-y-4 mb-8">
+      {billRequests.map((request) => (
+        <div key={request.id} className="border rounded-xl p-4 bg-slate-50">
+          <p><strong>Table:</strong> {request.table_display}</p>
+          <p><strong>Type:</strong> {formatRequestType(request.type)}</p>
+          <p><strong>Requested:</strong> {new Date(request.created_at).toLocaleTimeString()}</p>
+
+          <button
+            onClick={() => resolveTableRequest(request.id)}
+            className="bg-slate-700 text-white px-4 py-2 rounded mt-4"
+          >
+            ✅ Resolve
+          </button>
+        </div>
+      ))}
+    </div>
+
     {/* NEW */}
     <h2 className="text-xl font-bold mb-4">
       🆕 New Orders ({newOrders.length})
